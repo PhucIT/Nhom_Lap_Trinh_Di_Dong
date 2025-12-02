@@ -42,4 +42,7 @@ interface WalletRepository {
      * @return Result để biết thành công hay thất bại.
      */
     suspend fun deleteWallet(walletId: String): Result<Unit>
+
+    // Hàm để cập nhật số dư ví
+    suspend fun updateWalletBalance(walletId: String, amountChange: Double): Result<Unit>
 }

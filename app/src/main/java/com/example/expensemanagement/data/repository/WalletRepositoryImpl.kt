@@ -110,4 +110,21 @@ class WalletRepositoryImpl @Inject constructor(
             Result.Error(e)
         }
     }
+
+    // hàm cập nhật lại số dư khi xóa sửa ví
+    override suspend fun updateWalletBalance(walletId: String, amountChange: Double): Result<Unit> {
+        val collection = userWalletsCollection ?: return Result.Error(Exception("User not logged in"))
+        return try {
+            firestore.runTransaction { transaction ->
+                val docRef = collection.document(walletId)
+                val snapshot = transaction.get(docRef)
+                val currentBalance = snapshot.getDouble("balance") ?: 0.0
+                val newBalance = currentBalance + amountChange
+                transaction.update(docRef, "balance", newBalance)
+            }.await()
+            Result.Success(Unit)
+        } catch (e: Exception) {
+            Result.Error(e)
+        }
+    }
 }

@@ -14,6 +14,7 @@ import javax.inject.Inject
 import android.app.Activity
 import android.net.Uri
 import android.util.Log
+import com.example.expensemanagement.data.repository.Category.CategoryRepository
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
@@ -43,7 +44,8 @@ sealed class AuthState {
 
 @HiltViewModel
 class AuthViewModel @Inject constructor(
-    private val auth: FirebaseAuth // Hilt "tiêm" FirebaseAuth vào đây
+    private val auth: FirebaseAuth, // Hilt "tiêm" FirebaseAuth vào đây
+    private val categoryRepository: CategoryRepository
 ) : ViewModel() {
 
     // --- State chung cho cả Đăng nhập & Đăng ký ---
@@ -163,6 +165,10 @@ class AuthViewModel @Inject constructor(
                         if (task.isSuccessful) {
                             _authState.value = AuthState.Authenticated // Đổi trạng thái
                             onSuccess() // Gọi hàm để điều hướng sang Home
+
+                            viewModelScope.launch {
+                                categoryRepository.initDefaultCategories()
+                            }
                         } else {
                             _authState.value = AuthState.Error(task.exception?.message ?: "Đăng nhập thất bại.")
                         }
@@ -357,6 +363,10 @@ class AuthViewModel @Inject constructor(
                                 _authState.value = AuthState.Authenticated
                                 onSuccess()
                                 // TODO: Lưu user vào Firestore (làm sau)
+
+                                viewModelScope.launch {
+                                    categoryRepository.initDefaultCategories()
+                                }
                             }
                         } else {
                             _authState.value = AuthState.Error(task.exception?.message ?: "Đăng ký thất bại.")
@@ -382,6 +392,10 @@ class AuthViewModel @Inject constructor(
                         if (task.isSuccessful) {
                             _authState.value = AuthState.Authenticated
                             onSuccess()
+
+                            viewModelScope.launch {
+                                categoryRepository.initDefaultCategories()
+                            }
                         } else {
                             _authState.value = AuthState.Error(task.exception?.message ?: "Đăng nhập Google thất bại.")
                         }

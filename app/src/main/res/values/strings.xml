@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">ExpenseManagement</string>
+
+    <!-- THÊM DÒNG NÀY VÀO VỚI ĐÚNG CLIENT ID CỦA BẠN -->
+    <string name="your_web_client_id" translatable="false">905885592566-fm2gp532ltkl67tpg9b58vroeq9mbqeo.apps.googleusercontent.com</string>
 </resources>

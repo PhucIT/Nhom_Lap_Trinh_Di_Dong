@@ -118,6 +118,7 @@ dependencies {
     // Thư viện cho xác thực sinh trắc học (Vân tay / Khuôn mặt)
     implementation("androidx.biometric:biometric-ktx:1.2.0-alpha05")
 
+    implementation("androidx.core:core-splashscreen:1.0.1")
 }
 
 

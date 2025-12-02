@@ -148,7 +148,7 @@ fun AddTransactionScreen(
 
             // 3. Nút Lưu Giao Dịch
             Button(
-                onClick = { viewModel.saveTransaction() },
+                onClick = { viewModel.saveTransaction(onSuccess = onNavigateBack) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),

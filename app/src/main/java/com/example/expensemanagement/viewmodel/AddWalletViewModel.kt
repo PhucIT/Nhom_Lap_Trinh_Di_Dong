@@ -61,12 +61,12 @@ class AddWalletViewModel @Inject constructor(
     val creditWalletName: StateFlow<String> = _creditWalletName.asStateFlow()
     private val _creditBalance = MutableStateFlow("") // Dư nợ
     val creditBalance: StateFlow<String> = _creditBalance.asStateFlow()
-    private val _creditLimit = MutableStateFlow("") // Hạn mức
-    val creditLimit: StateFlow<String> = _creditLimit.asStateFlow()
-    private val _statementDate = MutableStateFlow("") // Ngày sao kê
-    val statementDate: StateFlow<String> = _statementDate.asStateFlow()
-    private val _paymentDueDate = MutableStateFlow("") // Ngày thanh toán
-    val paymentDueDate: StateFlow<String> = _paymentDueDate.asStateFlow()
+//    private val _creditLimit = MutableStateFlow("") // Hạn mức
+//    val creditLimit: StateFlow<String> = _creditLimit.asStateFlow()
+//    private val _statementDate = MutableStateFlow("") // Ngày sao kê
+//    val statementDate: StateFlow<String> = _statementDate.asStateFlow()
+//    private val _paymentDueDate = MutableStateFlow("") // Ngày thanh toán
+//    val paymentDueDate: StateFlow<String> = _paymentDueDate.asStateFlow()
 
 
     // --- Hàm cập nhật (Cũng được tách riêng) ---
@@ -88,9 +88,9 @@ class AddWalletViewModel @Inject constructor(
     // Tab 2
     fun onCreditNameChange(name: String) { _creditWalletName.value = name }
     fun onCreditBalanceChange(balance: String) { _creditBalance.value = balance }
-    fun onCreditLimitChange(limit: String) { _creditLimit.value = limit }
-    fun onStatementDateChange(date: String) { _statementDate.value = date }
-    fun onPaymentDueDateChange(date: String) { _paymentDueDate.value = date }
+//    fun onCreditLimitChange(limit: String) { _creditLimit.value = limit }
+//    fun onStatementDateChange(date: String) { _statementDate.value = date }
+//    fun onPaymentDueDateChange(date: String) { _paymentDueDate.value = date }
 
 
     // --- HÀM LƯU VÍ (Đã sửa lại để dùng các biến riêng) ---
@@ -133,21 +133,24 @@ class AddWalletViewModel @Inject constructor(
 
     private fun saveCreditWallet() {
         val name = _creditWalletName.value.trim()
-        val balance = _creditBalance.value.toDoubleOrNull()
-        val creditLimit = _creditLimit.value.toDoubleOrNull()
-        val statementDate = _statementDate.value.toIntOrNull()
-        val paymentDueDate = _paymentDueDate.value.toIntOrNull()
-        if (name.isBlank() || balance == null || creditLimit == null || statementDate == null || paymentDueDate == null) {
-            _uiState.value = AddWalletUiState.Error("Vui lòng nhập đầy đủ thông tin")
+        val balance = _creditBalance.value.toDoubleOrNull() // Dư nợ
+
+        // Bây giờ chỉ cần kiểm tra tên và dư nợ
+        if (name.isBlank() || balance == null) {
+            _uiState.value = AddWalletUiState.Error("Vui lòng nhập Tên thẻ và Dư nợ hiện tại")
             return
         }
-        if (statementDate !in 1..31 || paymentDueDate !in 1..31) {
-            _uiState.value = AddWalletUiState.Error("Ngày sao kê/thanh toán phải từ 1 đến 31")
-            return
-        }
+
+        // Tạo ví chỉ với các thông tin cần thiết
         val wallet = Wallet(
-            name = name, balance = balance, currency = _walletCurrency.value.trim(), type = "Credit",
-            creditLimit = creditLimit, statementDate = statementDate, paymentDueDate = paymentDueDate
+            name = name,
+            balance = balance, // Dư nợ sẽ được lưu vào trường balance
+            currency = _walletCurrency.value.trim(),
+            type = "Credit",
+            // Các trường khác sẽ có giá trị mặc định là null hoặc 0.0
+            creditLimit = 0.0,
+            statementDate = null,
+            paymentDueDate = null
         )
         executeSave(wallet)
     }
@@ -176,8 +179,8 @@ class AddWalletViewModel @Inject constructor(
         _savingEndDate.value = null
         _creditWalletName.value = ""
         _creditBalance.value = ""
-        _creditLimit.value = ""
-        _statementDate.value = ""
-        _paymentDueDate.value = ""
+//        _creditLimit.value = ""
+//        _statementDate.value = ""
+//        _paymentDueDate.value = ""
     }
 }

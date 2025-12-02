@@ -20,7 +20,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.material3.Text
 import androidx.compose.material3.Button
 import com.example.expensemanagement.ui.screens.auth.ForgotPasswordScreen
-import com.example.expensemanagement.ui.screens.home.HomeScreen
+import com.example.expensemanagement.ui.screens.home.HomeScreen //<-- Đây là màn hình Ví cũ
+import com.example.expensemanagement.ui.screens.home.DashboardScreen // <-- Import màn hình mới
 import com.example.expensemanagement.ui.screens.wallet.AddWalletScreen
 import androidx.navigation.navArgument
 import androidx.navigation.NavType
@@ -37,6 +38,7 @@ import com.example.expensemanagement.ui.screens.settings.ProfileScreen
 import com.example.expensemanagement.ui.screens.settings.SettingsScreen
 import com.example.expensemanagement.ui.screens.settings.ThemeScreen
 import com.example.expensemanagement.ui.screens.settings.SecurityScreen
+import com.example.expensemanagement.ui.screens.transaction.TransactionDetailScreen
 import com.example.expensemanagement.viewmodel.PinScreenMode
 
 
@@ -71,7 +73,7 @@ fun AppNavigation(
             LoginScreen(
                 onLoginSuccess = {
                     // Đăng nhập thành công, đi đến Home
-                    navController.navigate(AppDestinations.Home.route) {
+                    navController.navigate(AppDestinations.Dashboard.route) {
                         popUpTo(AppDestinations.Login.route) { inclusive = true }
                     }
                 },
@@ -99,7 +101,7 @@ fun AppNavigation(
                 onRegisterSuccess = {
                     // Đăng ký thành công, đi đến Home
                     // (Bạn có thể đổi logic này để đi đến màn "Tạo Ví" sau)
-                    navController.navigate(AppDestinations.Home.route) {
+                    navController.navigate(AppDestinations.Dashboard.route) {
                         popUpTo(AppDestinations.Register.route) { inclusive = true }
                         popUpTo(AppDestinations.Login.route) { inclusive = true }
                     }
@@ -121,7 +123,7 @@ fun AppNavigation(
                 },
                 onAuthSuccess = {
                     // TODO: Nên chuyển sang màn "Đặt Mật khẩu Mới"
-                    navController.navigate(AppDestinations.Home.route) {
+                    navController.navigate(AppDestinations.Dashboard.route) {
                         popUpTo(AppDestinations.ForgotPassword.route) { inclusive = true }
                         popUpTo(AppDestinations.Login.route) { inclusive = true }
                     }
@@ -130,8 +132,18 @@ fun AppNavigation(
             )
         }
 
+        // Màn hình Home mới là Dashboard
+            composable(AppDestinations.Dashboard.route) {
+                DashboardScreen(
+                    navController = navController,
+                    onNavigateToAddWallet = {
+                        navController.navigate(AppDestinations.AddWallet.route)
+                    }
+                )
+            }
+
         // 5. Màn hình Chính (Home) (Vẫn tạm thời)
-        composable(AppDestinations.Home.route) {
+        composable(AppDestinations.Wallets.route) {
             HomeScreen(
                 onAddWalletClicked = {
                     // Nhấn nút "+ Thêm ví" -> đi đến màn Thêm Ví
@@ -284,7 +296,10 @@ fun AppNavigation(
         // lịch sử giao dịch
         composable(AppDestinations.TransactionHistory.route) {
             TransactionHistoryScreen(
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToDetail = { transactionId ->
+                    navController.navigate(AppDestinations.TransactionDetail.createRoute(transactionId))
+                }
             )
         }
 
@@ -381,6 +396,22 @@ fun AppNavigation(
                 onPinSuccess = {
                     // Đổi PIN thành công, quay lại màn hình Bảo mật
                     navController.popBackStack()
+                }
+            )
+        }
+
+        // xóa và sửa giao dịch
+
+        composable(
+            route = AppDestinations.TransactionDetail.route,
+            arguments = listOf(navArgument("transactionId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val transactionId = backStackEntry.arguments?.getString("transactionId") ?: ""
+            TransactionDetailScreen(
+                onNavigateBack = { navController.popBackStack() },
+                // Khi nhấn "Sửa", điều hướng đến AddTransaction với ID
+                onNavigateToEdit = {
+                    navController.navigate(AppDestinations.AddTransaction.createRouteForEdit(transactionId))
                 }
             )
         }

@@ -171,6 +171,8 @@ data class WalletDetailUiState(
     val budgetProgress: Float = 0f,
     val transactions: List<Transaction> = emptyList(),
     val walletType: String = "",
+    val hasBudget: Boolean = false, // <-- THÊM CỜ MỚI ĐỂ BIẾT CÓ NGÂN SÁCH HAY KHÔNG
+    val budgetLimit: Double = 0.0, // <-- THÊM HẠN MỨC NGÂN SÁCH
     val errorMessage: String? = null,
     val currentUser: User? = null // <-- THÊM THÔNG TIN USER
 )
@@ -222,6 +224,9 @@ class WalletDetailViewModel @Inject constructor(
 
                 val walletTypeForBudget = mapGroupIdToType(groupId)
                 val budget = budgetList.firstOrNull { it.walletType == walletTypeForBudget }
+
+                // Tính toán dựa trên việc có tìm thấy ngân sách hay không
+                val hasBudget = budget != null
                 val budgetLimit = budget?.limitAmount ?: 0.0
 
                 val remaining = budgetLimit - totalSpent
@@ -244,7 +249,10 @@ class WalletDetailViewModel @Inject constructor(
                     spentAmount = totalSpent,
                     remainingAmount = remaining,
                     budgetProgress = progress,
-                    transactions = groupTransactions,
+                    hasBudget = hasBudget,
+                    budgetLimit = budgetLimit, // <-- TRUYỀN HẠN MỨC VÀO STATE
+//                    transactions = groupTransactions,
+                    transactions = groupTransactions.sortedByDescending { it.date }, // sắp xếp giao dịch mới nhất lên đầu
                     walletType = groupId,
                     currentUser = currentUser // <-- TRUYỀN USER VÀO STATE
                 )

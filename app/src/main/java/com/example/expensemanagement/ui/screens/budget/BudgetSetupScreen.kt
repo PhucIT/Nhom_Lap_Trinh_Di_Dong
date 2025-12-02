@@ -233,7 +233,8 @@ fun CategorySelector(
         onExpandedChange = { expanded = !expanded }
     ) {
         OutlinedTextField(
-            value = selectedCategory?.name ?: "Đang tải...",
+//            value = selectedCategory?.name ?: "Đang tải...",
+            value = selectedCategory?.name ?: "Chọn hạng mục",
             onValueChange = {},
             readOnly = true,
             leadingIcon = { Icon(Icons.Default.Category, contentDescription = null, tint = Color.Gray) },

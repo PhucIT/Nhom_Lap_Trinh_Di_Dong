@@ -34,6 +34,10 @@ import com.example.expensemanagement.ui.screens.home.formatCurrency
 import com.example.expensemanagement.viewmodel.WalletDetailViewModel
 import java.text.SimpleDateFormat
 import java.util.*
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Warning
+
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,12 +97,16 @@ fun WalletDetailScreen(
     ) { paddingValues ->
 
         if (uiState.isLoading) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Scaffold
         }
 
         if (uiState.errorMessage != null) {
-            Box(modifier = Modifier.fillMaxSize().padding(paddingValues), contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues), contentAlignment = Alignment.Center) {
                 Text("Lỗi: ${uiState.errorMessage}", color = Color.Red)
             }
             return@Scaffold
@@ -119,7 +127,9 @@ fun WalletDetailScreen(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFE0F7FA))
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -149,8 +159,9 @@ fun WalletDetailScreen(
                 BudgetCard(
                     spentAmount = uiState.spentAmount,
                     remainingAmount = uiState.remainingAmount,
-                    progress = uiState.budgetProgress,
-                    isBalanceVisible = true
+                    limitAmount = uiState.budgetLimit, // <-- Truyền Hạn mức
+                    progress = uiState.budgetProgress
+//                    isBalanceVisible = true
                 )
                 Spacer(modifier = Modifier.height(24.dp))
             }
@@ -164,9 +175,19 @@ fun WalletDetailScreen(
                         modifier = Modifier
                             .background(Color(0xFF80CBC4), RoundedCornerShape(8.dp))
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Thiết lập ngân sách", fontSize = 12.sp)
+//                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+//                        Spacer(modifier = Modifier.width(4.dp))
+//                        Text("Thiết lập ngân sách", fontSize = 12.sp)
+                        // Hiển thị icon và chữ khác nhau
+                        if (uiState.hasBudget) {
+                            Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Sửa ngân sách", fontSize = 12.sp)
+                        } else {
+                            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Thiết lập ngân sách", fontSize = 12.sp)
+                        }
                     }
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -205,21 +226,36 @@ fun BudgetCard(
     spentAmount: Double,
     remainingAmount: Double,
     progress: Float,
-    isBalanceVisible: Boolean
+    limitAmount: Double // <-- Nhận Hạn mức
+//    isBalanceVisible: Boolean
 ) {
+
+    val isOverBudget = spentAmount > limitAmount
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFEEEEEE))
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            // Dòng 1: Hạn mức
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text("Hạn mức:", style = MaterialTheme.typography.bodyMedium, color = Color.Gray)
+                Text(
+                    text = limitAmount.formatCurrency(),
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            // đã chi
             Row {
                 Text("đã chi: ", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
                 Text(
-                    text = if (isBalanceVisible) spentAmount.formatCurrency() else "∗∗∗∗∗∗∗",
+                    text = spentAmount.formatCurrency(),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Red
+                    color = if (isOverBudget) Color.Red else MaterialTheme.colorScheme.onSurface
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
@@ -229,18 +265,39 @@ fun BudgetCard(
                     .fillMaxWidth()
                     .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
-                color = Color(0xFF26A69A),
-                trackColor = Color.LightGray
+                color = if (isOverBudget) Color.Red else Color(0xFF26A69A), // Đổi màu nếu vượt mức
+                trackColor = Color.LightGray.copy(alpha = 0.5f)
             )
             Spacer(modifier = Modifier.height(8.dp))
-            Row {
-                Text("Còn lại: ", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
-                Text(
-                    text = if (isBalanceVisible) remainingAmount.formatCurrency() else "∗∗∗∗∗∗∗",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Red
-                )
+            // Dòng 3: Còn lại hoặc Cảnh báo
+            if (isOverBudget) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    Icon(Icons.Default.Warning, contentDescription = "Cảnh báo", tint = Color.Red, modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        "Bạn đã vượt hạn mức!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Red
+                    )
+                }
+            } else {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        "Còn lại:",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray
+                    )
+                    Text(
+                        text = remainingAmount.formatCurrency(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
             }
         }
     }

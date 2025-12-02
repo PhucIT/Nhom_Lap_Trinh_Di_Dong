@@ -1,5 +1,6 @@
 package com.example.expensemanagement.data.repository.Budget
 
+import android.util.Log
 import com.example.expensemanagement.data.Result
 import com.example.expensemanagement.data.model.Budget
 import com.google.firebase.auth.FirebaseAuth
@@ -37,22 +38,35 @@ class BudgetRepositoryImpl @Inject constructor(
         val collection = userBudgetsCollection
             ?: return Result.Error(IllegalStateException("User not logged in"))
         return try {
-            // Nếu budget chưa có ID, tạo ID mới
-            val docRef = if (budget.id.isNotEmpty()) {
-                collection.document(budget.id)
-            } else {
-                collection.document() // Tự sinh ID
+            // NẾU LÀ SỬA (đã có ID từ trước)
+            if (budget.id.isNotBlank()) {
+                Log.d("BudgetRepo", "Đang cập nhật budget ID: ${budget.id}")
+                collection.document(budget.id).set(budget).await()
             }
+            // NẾU LÀ TẠO MỚI (chưa có ID)
+            else {
+                // Kiểm tra xem đã có ngân sách cho loại ví này chưa
+                val existingDoc = collection
+                    .whereEqualTo("walletType", budget.walletType)
+                    .limit(1)
+                    .get()
+                    .await()
 
-            // Lưu budget với ID đã có (đảm bảo ID trong object khớp với ID document)
-            val budgetWithId = budget.copy(id = docRef.id)
-
-            //  DÙNG `await()` CHO TÁC VỤ `set`
-            docRef.set(budgetWithId).await()
-
+                if (existingDoc.isEmpty) {
+                    // Nếu chưa có, tạo mới với ID tự động
+                    Log.d("BudgetRepo", "Tạo ngân sách mới cho loại: ${budget.walletType}")
+                    val newDocRef = collection.document()
+                    collection.document(newDocRef.id).set(budget.copy(id = newDocRef.id)).await()
+                } else {
+                    // Nếu đã có, cập nhật (ghi đè) vào document đó
+                    val docId = existingDoc.documents.first().id
+                    Log.d("BudgetRepo", "Đã có ngân sách, cập nhật vào ID: $docId")
+                    collection.document(docId).set(budget.copy(id = docId)).await()
+                }
+            }
             Result.Success(Unit)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Log.e("BudgetRepo", "Lỗi khi setBudget", e)
             Result.Error(e)
         }
     }

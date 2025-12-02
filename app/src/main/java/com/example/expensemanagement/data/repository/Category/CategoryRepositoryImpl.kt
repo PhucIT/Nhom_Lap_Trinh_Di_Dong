@@ -3,15 +3,19 @@ package com.example.expensemanagement.data.repository.Category
 import android.util.Log
 import androidx.compose.ui.geometry.isEmpty
 import com.example.expensemanagement.data.model.Category
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ktx.snapshots
 import com.google.firebase.firestore.ktx.toObjects
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.flow.flowOf
+import com.google.firebase.firestore.WriteBatch
 
 //@Singleton
 //class CategoryRepositoryImpl @Inject constructor(
@@ -39,89 +43,96 @@ import javax.inject.Singleton
 //}
 @Singleton
 class CategoryRepositoryImpl @Inject constructor(
+    private val auth: FirebaseAuth,
     private val firestore: FirebaseFirestore
 ) : CategoryRepository {
 
-    // Đường dẫn đến collection categories.
-    // Giả sử collection "categories" nằm ở cấp cao nhất.
-    private val categoriesCollection = firestore.collection("categories")
+    private val userCategoriesCollection
+        get() = auth.currentUser?.uid?.let { uid ->
+            firestore.collection("users").document(uid).collection("categories")
+        }
 
-    override fun getExpenseCategories(): Flow<List<Category>> {
-        Log.d("CategoryRepo", "Bắt đầu lấy danh mục chi tiêu...")
-        return categoriesCollection
-            .whereEqualTo("kind", "Expense") // Chỉ lấy hạng mục "Chi"
+//    override fun getExpenseCategories(): Flow<List<Category>> {
+//        val collection = userCategoriesCollection
+//            ?: return emptyFlow<List<Category>>().also {
+//                Log.e("CategoryRepo", "User chưa đăng nhập!")
+//            }
+//
+//        return collection
+//            .whereEqualTo("kind", "Expense")
+//            .snapshots()
+//            .map { snapshot ->
+//                val list = snapshot.toObjects<Category>()
+//                Log.d("CategoryRepo", "Lấy được ${list.size} hạng mục chi tiêu: $list")
+//                list
+//            }
+//            .catch { e ->
+//                Log.e("CategoryRepo", "Lỗi lấy hạng mục chi tiêu", e)
+//                emit(emptyList())
+//            }
+//    }
+
+    override fun getExpenseCategories(userId: String): Flow<List<Category>> {
+        val collection = firestore.collection("users").document(userId).collection("categories")
+        return collection
+            .whereEqualTo("kind", "Expense")
             .snapshots()
-            .map { snapshot ->
-                val categories = snapshot.toObjects<Category>()
-                Log.d("CategoryRepo", "Lấy thành công ${categories.size} hạng mục.")
-                categories // Trả về danh sách
-            }
-            .catch { exception ->
-                // **QUAN TRỌNG NHẤT:** Nếu có lỗi, in nó ra Logcat
-                Log.e("CategoryRepo", "Lỗi khi lấy danh mục: ", exception)
-                emit(emptyList()) // Vẫn trả về danh sách rỗng để app không crash
-            }
+            .map { it.toObjects<Category>() }
+            .catch { e -> emit(emptyList()) }
     }
 
-    /**
-     * HÀM MỚI - Dành cho AddTransactionViewModel.
-     * Lấy danh sách các hạng mục dựa trên loại (type) được truyền vào.
-     */
-    override fun getCategories(type: String): Flow<List<Category>> {
-        Log.d("CategoryRepo", "Bắt đầu lấy danh mục loại: $type")
-        return categoriesCollection
-            .whereEqualTo("type", type) // Lọc theo type được truyền vào ("Expense" hoặc "Income")
+//    override fun getCategories(type: String): Flow<List<Category>> {
+//        val collection = userCategoriesCollection ?: return emptyFlow()
+//        return collection
+//            .whereEqualTo("kind", type)
+//            .snapshots()
+//            .map { snapshot -> snapshot.toObjects<Category>() }
+//            .catch { e ->
+//                Log.e("CategoryRepo", "Lỗi lấy category loại $type", e)
+//                emit(emptyList())
+//            }
+//    }
+
+    override fun getCategories(userId: String, type: String): Flow<List<Category>> {
+        val collection = firestore.collection("users").document(userId).collection("categories")
+        return collection
+            .whereEqualTo("kind", type)
             .snapshots()
-            .map { snapshot ->
-                val categories = snapshot.toObjects<Category>()
-                Log.d("CategoryRepo", "Lấy thành công ${categories.size} hạng mục loại $type.")
-                categories
-            }
-            .catch { exception ->
-                Log.e("CategoryRepo", "Lỗi khi lấy danh mục loại $type: ", exception)
-                emit(emptyList()) // Trả về danh sách rỗng nếu có lỗi
-            }
+            .map { it.toObjects<Category>() }
+            .catch { e -> emit(emptyList()) }
     }
 
-    /**
-     * HÀM MỚI - Dành cho việc khởi tạo ứng dụng lần đầu.
-     * Dùng một lần để tạo các hạng mục mặc định cho người dùng mới.
-     */
     override suspend fun initDefaultCategories() {
-        try {
-            // 1. Kiểm tra xem collection 'categories' đã có dữ liệu chưa
-            val snapshot = categoriesCollection.limit(1).get().await()
+        val collection = userCategoriesCollection
+            ?: throw IllegalStateException("User chưa đăng nhập khi init categories")
 
-            // 2. Nếu chưa có, thì mới thêm dữ liệu mặc định
+        try {
+            val snapshot = collection.limit(1).get().await()
             if (snapshot.isEmpty) {
-                Log.d("CategoryRepo", "Không có hạng mục nào, bắt đầu tạo dữ liệu mặc định...")
-                val defaultCategories = listOf(
-                    // Hạng mục chi tiêu
-                    Category(name = "Ăn uống", type = "Expense", icon = "ic_food"),
-                    Category(name = "Đi lại", type = "Expense", icon = "ic_transport"),
-                    Category(name = "Hóa đơn", type = "Expense", icon = "ic_bill"),
-                    Category(name = "Giải trí", type = "Expense", icon = "ic_entertainment"),
-                    Category(name = "Mua sắm", type = "Expense", icon = "ic_shopping"),
-                    // Hạng mục thu nhập
-                    Category(name = "Lương", type = "Income", icon = "ic_salary"),
-                    Category(name = "Thưởng", type = "Income", icon = "ic_bonus"),
-                    Category(name = "Thu nhập phụ", type = "Income", icon = "ic_side_hustle")
+                Log.d("CategoryRepo", "Chưa có hạng mục → tạo mặc định cho user hiện tại")
+
+                val defaults = listOf(
+                    Category(id = "", name = "Ăn uống",       type = "Expense", icon = "ic_food"),
+                    Category(id = "", name = "Đi lại",        type = "Expense", icon = "ic_transport"),
+                    Category(id = "", name = "Mua sắm",       type = "Expense", icon = "ic_shopping"),
+                    Category(id = "", name = "Giải trí",      type = "Expense", icon = "ic_entertainment"),
+                    Category(id = "", name = "Hóa đơn",       type = "Expense", icon = "ic_bill"),
+                    Category(id = "", name = "Sức khỏe",     type = "Expense", icon = "ic_health"),
+                    Category(id = "", name = "Lương",         type = "Income",  icon = "ic_salary"),
+                    Category(id = "", name = "Thưởng",        type = "Income",  icon = "ic_bonus")
                 )
 
-                // 3. Dùng WriteBatch để thêm tất cả một lúc cho hiệu quả
-                val batch = firestore.batch()
-                defaultCategories.forEach { category ->
-                    val docRef = categoriesCollection.document()
-                    // Nhớ copy lại ID vào object trước khi set
+                // ĐÚNG CÚ PHÁP VIẾT BATCH TRONG KOTLIN COROUTINES
+                val batch: WriteBatch = firestore.batch()
+                defaults.forEach { category ->
+                    val docRef = collection.document()
                     batch.set(docRef, category.copy(id = docRef.id))
                 }
                 batch.commit().await()
-                Log.d("CategoryRepo", "Tạo các hạng mục mặc định thành công.")
-            } else {
-                Log.d("CategoryRepo", "Đã có dữ liệu hạng mục, không cần tạo.")
+                Log.d("CategoryRepo", "Tạo mặc định thành công!")
             }
         } catch (e: Exception) {
-            Log.e("CategoryRepo", "Lỗi nghiêm trọng khi khởi tạo hạng mục: ", e)
+            Log.e("CategoryRepo", "Lỗi init categories", e)
         }
     }
 }

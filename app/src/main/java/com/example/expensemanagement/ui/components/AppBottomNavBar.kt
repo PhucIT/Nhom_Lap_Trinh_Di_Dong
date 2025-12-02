@@ -101,6 +101,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import com.example.expensemanagement.ui.navigation.AppDestinations
 import com.example.expensemanagement.ui.theme.PrimaryGreen
+import androidx.compose.material.icons.filled.Home
 
 /**
  * Bottom Navigation Bar (Đã được nâng cấp)
@@ -115,6 +116,7 @@ fun AppBottomNavBar(
 
     // Định nghĩa các item trong bottom bar một cách rõ ràng
     val navigationItems = listOf(
+        BottomNavItem.Dashboard,
         BottomNavItem.History,
         BottomNavItem.Wallets,
         BottomNavItem.Reports,
@@ -149,8 +151,8 @@ fun AppBottomNavBar(
                 colors = NavigationBarItemDefaults.colors(
                     selectedIconColor = PrimaryGreen,
                     selectedTextColor = PrimaryGreen,
-                    unselectedIconColor = Color.Gray,
-                    unselectedTextColor = Color.Gray
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             )
         }
@@ -159,8 +161,9 @@ fun AppBottomNavBar(
 
 // Tạo một sealed class để quản lý các item trong BottomNavBar dễ dàng hơn
 sealed class BottomNavItem(val route: String, val title: String, val icon: androidx.compose.ui.graphics.vector.ImageVector) {
+    object Dashboard : BottomNavItem(AppDestinations.Dashboard.route, "Trang chủ", Icons.Default.Home)
     object History : BottomNavItem(AppDestinations.TransactionHistory.route, "Giao dịch", Icons.Default.History)
-    object Wallets : BottomNavItem(AppDestinations.Home.route, "Ví", Icons.Default.Wallet)
+    object Wallets : BottomNavItem(AppDestinations.Wallets.route, "Ví", Icons.Default.Wallet)
     object Reports : BottomNavItem(AppDestinations.Reports.route, "Báo cáo", Icons.Default.Assessment)
     object Settings : BottomNavItem(AppDestinations.Settings.route, "Cài đặt", Icons.Default.Settings)
 }

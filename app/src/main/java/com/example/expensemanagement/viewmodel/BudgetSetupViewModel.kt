@@ -8,7 +8,7 @@ import com.example.expensemanagement.data.model.Budget
 import com.example.expensemanagement.data.repository.Budget.BudgetRepository
 import com.example.expensemanagement.data.model.Category
 import com.example.expensemanagement.data.repository.Category.CategoryRepository
-
+import com.example.expensemanagement.data.repository.Auth.AuthRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import java.util.Date
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
+import android.util.Log
 
 
 // Trạng thái UI
@@ -30,6 +32,7 @@ sealed class BudgetSetupUiState {
 class BudgetSetupViewModel @Inject constructor(
     private val budgetRepository: BudgetRepository,
     private val categoryRepository: CategoryRepository,
+    private val authRepository: AuthRepository,
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,7 +46,11 @@ class BudgetSetupViewModel @Inject constructor(
 //    private val _cycle = MutableStateFlow("Hàng Tháng") // Chu kỳ
 //    val cycle: StateFlow<String> = _cycle.asStateFlow()
 
-    private val _startDate = MutableStateFlow(Date()) // Ngày bắt đầu (Mặc định là hôm nay)
+//    private val _startDate = MutableStateFlow(Date()) // Ngày bắt đầu (Mặc định là hôm nay)
+//    val startDate: StateFlow<Date> = _startDate.asStateFlow()
+
+    //startDate phải là Date?, nhưng ta sẽ cung cấp giá trị mặc định là Date()
+    private val _startDate = MutableStateFlow(Date())
     val startDate: StateFlow<Date> = _startDate.asStateFlow()
     private val _endDate = MutableStateFlow<Date?>(null)
     val endDate: StateFlow<Date?> = _endDate.asStateFlow()
@@ -70,24 +77,90 @@ class BudgetSetupViewModel @Inject constructor(
     // Lựa chọn "Tất cả các Hạng mục" đặc biệt
     private val allCategoriesOption = Category(id = "all", name = "Tất cả các Hạng mục")
 
+
+    // Biến để lưu lại ngân sách đã có, nếu là chế độ "Sửa"
+    private var existingBudget: Budget? = null
+
+
     init {
+        loadInitialData() // Tải dữ liệu ngân sách cũ (nếu có)
         loadCategories()
     }
 
+//    private fun loadCategories() {
+//        viewModelScope.launch {
+//            categoryRepository.getExpenseCategories().collect { categoriesFromDb ->
+//                // 2. TẠO LỰA CHỌN "TẤT CẢ": Tạo một đối tượng Category đặc biệt.
+//                val allCategoriesOption = Category(id = "all", name = "Tất cả các Hạng mục")
+//
+//                // 3. GỘP DANH SÁCH: Thêm lựa chọn "Tất cả" vào ĐẦU danh sách hạng mục thậ
+//                // Thêm lựa chọn "Tất cả" vào đầu danh sách
+//                val fullOptions = listOf(allCategoriesOption) + categoriesFromDb
+//                // 4. CẬP NHẬT UI: Gửi danh sách hoàn chỉnh này đến màn hình để hiển thị.
+//                _categoryOptions.value = fullOptions
+//                // Mặc định chọn "Tất cả"
+//                if (_selectedCategory.value == null) {
+//                    _selectedCategory.value = allCategoriesOption
+//                }
+//            }
+//        }
+//    }
+
     private fun loadCategories() {
         viewModelScope.launch {
-            categoryRepository.getExpenseCategories().collect { categoriesFromDb ->
-                // 2. TẠO LỰA CHỌN "TẤT CẢ": Tạo một đối tượng Category đặc biệt.
-                val allCategoriesOption = Category(id = "all", name = "Tất cả các Hạng mục")
+            // 1. LẤY USER ID TRƯỚC
+            val userId = authRepository.currentUserFlow.first()?.uid
+            if (userId == null) {
+                _uiState.value = BudgetSetupUiState.Error("Không thể xác thực người dùng.")
+                return@launch
+            }
 
-                // 3. GỘP DANH SÁCH: Thêm lựa chọn "Tất cả" vào ĐẦU danh sách hạng mục thậ
-                // Thêm lựa chọn "Tất cả" vào đầu danh sách
+            // 2. SỬA LẠI: GỌI HÀM VỚI USER ID
+            categoryRepository.getExpenseCategories(userId).collect { categoriesFromDb ->
+                val allCategoriesOption = Category(id = "all", name = "Tất cả các Hạng mục")
                 val fullOptions = listOf(allCategoriesOption) + categoriesFromDb
-                // 4. CẬP NHẬT UI: Gửi danh sách hoàn chỉnh này đến màn hình để hiển thị.
                 _categoryOptions.value = fullOptions
-                // Mặc định chọn "Tất cả"
-                if (_selectedCategory.value == null) {
-                    _selectedCategory.value = fullOptions.first()
+
+                // Chỉ chọn mặc định nếu chưa có ngân sách cũ nào được load
+                if (existingBudget == null && _selectedCategory.value == null) {
+                    _selectedCategory.value = allCategoriesOption
+                }
+            }
+        }
+    }
+
+    // --- HÀM MỚI: Dùng để load dữ liệu ngân sách đã có ---
+    private fun loadInitialData() {
+        viewModelScope.launch {
+            if (groupId.isNotEmpty()) {
+                val walletType = mapGroupIdToType(groupId)
+                Log.d("BudgetVM", "Bắt đầu load dữ liệu ngân sách cho walletType: $walletType")
+
+                // 1. Tìm xem có ngân sách nào đã tồn tại cho nhóm ví này không
+                val budget = budgetRepository.getBudgets().first().firstOrNull { it.walletType == walletType }
+
+                if (budget != null) {
+                    existingBudget = budget // Lưu lại để dùng lúc update
+                    Log.d("BudgetVM", "Đã tìm thấy ngân sách cũ: Hạn mức ${budget.limitAmount}")
+
+                    // 2. Nếu có, cập nhật UI bằng dữ liệu của nó
+                    _amount.value = budget.limitAmount.toLong().toString()
+                    _cycle.value = budget.cycle
+                    // Xử lý trường hợp startDate có thể là null
+                    _startDate.value = budget.startDate ?: Date() // Nếu null thì lấy ngày hiện tại
+                    _endDate.value = budget.endDate
+                    // Logic chọn lại category đã lưu
+                    if (budget.categoryIds.isNotEmpty()) {
+                        val savedCategoryId = budget.categoryIds.first()
+                        // Chờ cho `_categoryOptions` có dữ liệu rồi mới tìm
+                        _categoryOptions.first { it.isNotEmpty() }.find { it.id == savedCategoryId }
+                            ?.let {
+                                _selectedCategory.value = it
+                            }
+                    } else {
+                        Log.d("BudgetVM", "Không tìm thấy ngân sách cũ, ở chế độ tạo mới.")
+                        _selectedCategory.value = Category(id = "all", name = "Tất cả các Hạng mục")
+                    }
                 }
             }
         }
@@ -129,6 +202,8 @@ fun onCategoryChange(newCategory: Category) { _selectedCategory.value = newCateg
         viewModelScope.launch {
             // Tạo đối tượng Budget
             val newBudget = Budget(
+                // NẾU LÀ SỬA, GIỮ NGUYÊN ID CŨ. NẾU LÀ TẠO MỚI, ID SẼ LÀ RỖNG
+                id = existingBudget?.id ?: "",
                 name = "Ngân sách ${_selectedCategory.value}", // Tên tự động
                 limitAmount = limit,
                 cycle = _cycle.value,
@@ -157,7 +232,9 @@ fun onCategoryChange(newCategory: Category) { _selectedCategory.value = newCateg
             val result = budgetRepository.setBudget(newBudget)
 
             when (result) {
-                is Result.Success -> _uiState.value = BudgetSetupUiState.Success
+                is Result.Success -> {
+                    _uiState.value = BudgetSetupUiState.Success
+                }
                 is Result.Error -> _uiState.value = BudgetSetupUiState.Error(result.exception.message ?: "Lỗi lưu ngân sách")
             }
         }

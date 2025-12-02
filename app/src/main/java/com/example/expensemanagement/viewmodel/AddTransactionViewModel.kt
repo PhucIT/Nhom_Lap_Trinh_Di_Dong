@@ -1,5 +1,6 @@
 package com.example.expensemanagement.viewmodel
 
+import androidx.compose.ui.input.key.type
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,6 +14,7 @@ import com.example.expensemanagement.data.repository.transaction.TransactionRepo
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import com.example.expensemanagement.data.repository.Auth.AuthRepository
 import java.util.Date
 import javax.inject.Inject
 
@@ -28,7 +30,8 @@ data class AddTransactionUiState(
     val wallets: List<Wallet> = emptyList(),
     val categories: List<Category> = emptyList(),
     val selectedWallet: Wallet? = null,
-    val selectedCategory: Category? = null
+    val selectedCategory: Category? = null,
+    val isEditMode: Boolean = false          // true → đang sửa, false → thêm mới
 )
 
 @HiltViewModel
@@ -36,6 +39,7 @@ class AddTransactionViewModel @Inject constructor(
     private val transactionRepository: TransactionRepository,
     private val walletRepository: WalletRepository,
     private val categoryRepository: CategoryRepository,
+    private val authRepository: AuthRepository, // Thêm để lấy userId
     savedStateHandle: SavedStateHandle
 ) : ViewModel() {
 
@@ -43,50 +47,121 @@ class AddTransactionViewModel @Inject constructor(
     val uiState: StateFlow<AddTransactionUiState> = _uiState.asStateFlow()
 
     // Lấy ID ví nếu được truyền từ màn hình trước
+//    private val initialWalletId: String? = savedStateHandle.get<String>("walletId")
+
+    // Lấy ID từ navigation
+    private val transactionId: String? = savedStateHandle.get<String>("transactionId")
     private val initialWalletId: String? = savedStateHandle.get<String>("walletId")
 
+    // Biến để lưu lại giao dịch gốc khi sửa
+    private var originalTransaction: Transaction? = null
+
+//    init {
+//        // --- SỬA LẠI HOÀN TOÀN LOGIC INIT ĐỂ KHÔNG BỊ GHI ĐÈ STATE ---
+//
+//        // 1. Lắng nghe sự thay đổi của loại giao dịch (type) để lấy category tương ứng
+//        viewModelScope.launch {
+//            _uiState.map { it.type }
+//                .distinctUntilChanged() // Chỉ chạy khi type thực sự thay đổi (Expense -> Income)
+//                .flatMapLatest { type -> // Khi type thay đổi, hủy coroutine cũ và chạy cái mới
+//                    categoryRepository.getCategories(type)
+//                }
+//                .catch { e ->
+//                    // Xử lý lỗi nếu không lấy được category
+//                    _uiState.update { it.copy(error = "Lỗi tải hạng mục: ${e.message}") }
+//                }
+//                .collect { categories ->
+//                    // Cập nhật danh sách category và tự động chọn mục đầu tiên
+//                    _uiState.update {
+//                        it.copy(categories = categories, selectedCategory = categories.firstOrNull())
+//                    }
+//                }
+//        }
+//
+//        // 2. Lấy danh sách ví (chỉ một lần)
+//        viewModelScope.launch {
+//            walletRepository.getWallets()
+//                .catch { e ->
+//                    _uiState.update { it.copy(error = "Lỗi tải danh sách ví: ${e.message}") }
+//                }
+//                .collect { wallets ->
+//                    // Tự động chọn ví nếu có ID truyền vào, hoặc chọn ví đầu tiên
+//                    val preSelected = wallets.find { it.id == initialWalletId } ?: wallets.firstOrNull()
+//                    _uiState.update {
+//                        it.copy(wallets = wallets, selectedWallet = preSelected)
+//                    }
+//                }
+//        }
+//
+//        // 3. Gọi hàm khởi tạo Category mặc định (chỉ chạy khi cần)
+//        viewModelScope.launch {
+//            categoryRepository.initDefaultCategories()
+//        }
+//    }
+
     init {
-        // --- SỬA LẠI HOÀN TOÀN LOGIC INIT ĐỂ KHÔNG BỊ GHI ĐÈ STATE ---
+        // Cập nhật trạng thái isEditMode
+        _uiState.update { it.copy(isEditMode = transactionId != null) }
+        loadInitialData()
+    }
 
-        // 1. Lắng nghe sự thay đổi của loại giao dịch (type) để lấy category tương ứng
+    private fun loadInitialData() {
         viewModelScope.launch {
-            _uiState.map { it.type }
-                .distinctUntilChanged() // Chỉ chạy khi type thực sự thay đổi (Expense -> Income)
-                .flatMapLatest { type -> // Khi type thay đổi, hủy coroutine cũ và chạy cái mới
-                    categoryRepository.getCategories(type)
-                }
-                .catch { e ->
-                    // Xử lý lỗi nếu không lấy được category
-                    _uiState.update { it.copy(error = "Lỗi tải hạng mục: ${e.message}") }
-                }
-                .collect { categories ->
-                    // Cập nhật danh sách category và tự động chọn mục đầu tiên
+            val userId = authRepository.currentUserFlow.first()?.uid ?: return@launch
+
+            // Nếu là chế độ sửa, tải dữ liệu giao dịch cũ trước tiên
+            if (_uiState.value.isEditMode) {
+                transactionRepository.getTransactionById(transactionId!!).firstOrNull()?.let { tx ->
+                    originalTransaction = tx
+                    // Cập nhật các trường nhập liệu với dữ liệu cũ
                     _uiState.update {
-                        it.copy(categories = categories, selectedCategory = categories.firstOrNull())
+                        it.copy(
+                            amount = tx.amount.toLong().toString(),
+                            note = tx.note ?: "",
+                            date = tx.date ?: Date(),
+                            type = tx.type
+                        )
                     }
                 }
-        }
-
-        // 2. Lấy danh sách ví (chỉ một lần)
-        viewModelScope.launch {
-            walletRepository.getWallets()
-                .catch { e ->
-                    _uiState.update { it.copy(error = "Lỗi tải danh sách ví: ${e.message}") }
+            }
+            // Kết hợp luồng lấy ví và hạng mục
+            combine(
+                walletRepository.getWallets(),
+                // Lắng nghe type để lấy đúng category
+                _uiState.map { it.type }.distinctUntilChanged().flatMapLatest { type ->
+                    categoryRepository.getCategories(userId, type)
                 }
-                .collect { wallets ->
-                    // Tự động chọn ví nếu có ID truyền vào, hoặc chọn ví đầu tiên
-                    val preSelected = wallets.find { it.id == initialWalletId } ?: wallets.firstOrNull()
-                    _uiState.update {
-                        it.copy(wallets = wallets, selectedWallet = preSelected)
-                    }
+            ) { wallets, categories ->
+                // Tự động chọn giá trị
+                val state = _uiState.value
+                val preSelectedWallet = if (state.isEditMode) {
+                    wallets.find { it.id == originalTransaction?.walletId }
+                } else {
+                    wallets.find { it.id == initialWalletId } ?: wallets.firstOrNull()
                 }
-        }
 
-        // 3. Gọi hàm khởi tạo Category mặc định (chỉ chạy khi cần)
-        viewModelScope.launch {
-            categoryRepository.initDefaultCategories()
+                val preSelectedCategory = if (state.isEditMode) {
+                    categories.find { it.id == originalTransaction?.categoryId }
+                } else {
+                    categories.firstOrNull()
+                }
+
+                // Cập nhật state với dữ liệu mới
+                state.copy(
+                    wallets = wallets,
+                    categories = categories,
+                    selectedWallet = preSelectedWallet ?: state.selectedWallet,
+                    selectedCategory = preSelectedCategory ?: state.selectedCategory
+                )
+            }.catch { e ->
+                _uiState.update { it.copy(error = "Lỗi tải dữ liệu: ${e.message}") }
+            }.collect { newState ->
+                _uiState.value = newState
+            }
         }
     }
+
+
 
     // --- Các hàm cập nhật UI ---
     fun onTypeChanged(newType: String) {
@@ -106,7 +181,7 @@ class AddTransactionViewModel @Inject constructor(
     fun onCategorySelected(category: Category) { _uiState.update { it.copy(selectedCategory = category) } }
 
     // --- Hàm Lưu Giao Dịch ---
-    fun saveTransaction() {
+    fun saveTransaction(onSuccess: () -> Unit) {
         val state = _uiState.value
         val amountVal = state.amount.toDoubleOrNull()
 
@@ -128,6 +203,7 @@ class AddTransactionViewModel @Inject constructor(
 
         viewModelScope.launch {
             val newTransaction = Transaction(
+                id = originalTransaction?.id ?: "", // Giữ ID cũ nếu là sửa
                 amount = amountVal,
                 type = state.type,
                 date = state.date,
@@ -143,20 +219,37 @@ class AddTransactionViewModel @Inject constructor(
             val result = transactionRepository.addTransaction(newTransaction)
 
             if (result is Result.Success) {
-                // 2. CẬP NHẬT SỐ DƯ VÍ
-                val currentBalance = state.selectedWallet!!.balance
-                val amountDelta = if (state.type == "Expense") -amountVal else amountVal
-                val updatedWallet = state.selectedWallet!!.copy(balance = currentBalance + amountDelta)
-                val walletUpdateResult = walletRepository.updateWallet(updatedWallet)
+//                // 2. CẬP NHẬT SỐ DƯ VÍ
+//                val currentBalance = state.selectedWallet!!.balance
+//                val amountDelta = if (state.type == "Expense") -amountVal else amountVal
+//                val updatedWallet = state.selectedWallet!!.copy(balance = currentBalance + amountDelta)
+//                val walletUpdateResult = walletRepository.updateWallet(updatedWallet)
+//
+//                if (walletUpdateResult is Result.Success) {
+//                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+//                } else {
+//                    _uiState.update { it.copy(isLoading = false, error = "Lưu giao dịch thành công nhưng lỗi cập nhật số dư.") }
+//                }
+                // 2. CẬP NHẬT LẠI SỐ DƯ VÍ
+                if (result is Result.Success) {
+                    if (state.isEditMode && originalTransaction != null) {
+                        val oldAmountChange = if (originalTransaction!!.type == "Expense") originalTransaction!!.amount else -originalTransaction!!.amount
+                        walletRepository.updateWalletBalance(originalTransaction!!.walletId, oldAmountChange)
 
-                if (walletUpdateResult is Result.Success) {
+                        val newAmountChange = if (newTransaction.type == "Expense") -newTransaction.amount else newTransaction.amount
+                        walletRepository.updateWalletBalance(newTransaction.walletId, newAmountChange)
+                    } else {
+                        val amountChange = if (newTransaction.type == "Expense") -newTransaction.amount else newTransaction.amount
+                        walletRepository.updateWalletBalance(newTransaction.walletId, amountChange)
+                    }
+
                     _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                    onSuccess()
                 } else {
-                    _uiState.update { it.copy(isLoading = false, error = "Lưu giao dịch thành công nhưng lỗi cập nhật số dư.") }
+                    val errorMsg =
+                        (result as? Result.Error)?.exception?.message ?: "Lỗi không xác định"
+                    _uiState.update { it.copy(isLoading = false, error = "Lỗi lưu: $errorMsg") }
                 }
-            } else {
-                val errorMsg = (result as? Result.Error)?.exception?.message ?: "Lỗi không xác định"
-                _uiState.update { it.copy(isLoading = false, error = "Lỗi lưu: $errorMsg") }
             }
         }
     }

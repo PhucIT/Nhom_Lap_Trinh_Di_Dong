@@ -9,7 +9,10 @@ data class Category(
     @DocumentId
     val id: String = "",
     val name: String = "",      // Tên hạng mục (VD: "Ăn uống", "Giải trí")
-    val type: String = "Expense", // Loại: "Expense" (Chi) hoặc "Income" (Thu)
+//    @PropertyName("kind")
+    @field:PropertyName("kind") @get:PropertyName("kind")
+//    val type: String = "Expense",
+    val type: String? = "",
     val icon: String = "",       // Tên của icon để hiển thị
 
     // Dùng Annotation @PropertyName để ánh xạ trường "kind" trong Firestore

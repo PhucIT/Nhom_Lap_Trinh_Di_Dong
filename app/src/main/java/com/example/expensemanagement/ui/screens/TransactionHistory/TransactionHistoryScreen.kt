@@ -3,6 +3,7 @@ package com.example.expensemanagement.ui.screens.history
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,6 +37,7 @@ import java.util.*
 @Composable
 fun TransactionHistoryScreen(
     onNavigateBack: () -> Unit,
+    onNavigateToDetail: (String) -> Unit, // điều hướng
     viewModel: TransactionHistoryViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -105,7 +107,7 @@ fun TransactionHistoryScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 2. Khối Tổng quan & Tìm kiếm (ĐÃ SỬA LẠI)
+            // 2. Khối Tổng quan & Tìm kiếm
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
@@ -127,8 +129,6 @@ fun TransactionHistoryScreen(
                         shape = RoundedCornerShape(12.dp),
                         singleLine = true
                     )
-
-                    // XÓA BỎ CÁC NÚT LỌC "TỔNG CỘNG" VÀ "THEO NGÀY"
                 }
             }
 
@@ -159,7 +159,15 @@ fun TransactionHistoryScreen(
                     ) { item ->
                         when (item) {
                             is TransactionHistoryItem.Header -> DateHeader(date = item.date)
-                            is TransactionHistoryItem.TransactionRow -> TransactionRowItem(item = item.transactionUiModel)
+                            is TransactionHistoryItem.TransactionRow -> {
+                                Box(
+                                    modifier = Modifier.clickable {
+                                        onNavigateToDetail(item.transactionUiModel.id)
+                                    }
+                                ){
+                                    TransactionRowItem(item = item.transactionUiModel)
+                                }
+                            }
                         }
                     }
                 }

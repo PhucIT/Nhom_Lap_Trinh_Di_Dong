@@ -30,8 +30,13 @@ sealed class AppDestinations(val route: String) {
 
     // --- CÁC MÀN HÌNH CHÍNH (SAU KHI ĐĂNG NHẬP) ---
 
+    data object Dashboard : AppDestinations("dashboard") // Màn Home mới
+
     // Màn hình Chính (hiển thị danh sách ví)
-    object Home : AppDestinations("home")
+//    object Home : AppDestinations("home")
+
+    object Wallets : AppDestinations("wallets")
+
 
     object AddWallet : AppDestinations("add_wallet") // Màn hình "Thêm Ví"
 
@@ -54,7 +59,12 @@ sealed class AppDestinations(val route: String) {
 //    }
 
     // Màn hình Thêm Giao dịch
-    object AddTransaction : AppDestinations("add_transaction")
+    object AddTransaction : AppDestinations("add_transaction?transactionId={transactionId}") {
+        // Hàm để tạo route cho chế độ "Thêm mới" (không có ID)
+        fun createRoute() = "add_transaction"
+        // Hàm để tạo route cho chế độ "Chỉnh sửa" (có ID)
+        fun createRouteForEdit(transactionId: String) = "add_transaction?transactionId=$transactionId"
+    }
 
     // Màn hình Ngân sách
     object Budget : AppDestinations("budget")
@@ -90,6 +100,11 @@ sealed class AppDestinations(val route: String) {
 object BudgetSetup : AppDestinations("budget_setup/{groupId}") {
     fun createRoute(groupId: String) = "budget_setup/$groupId"
 }
+
+    // thực hiện xóa giao dịch
+    object TransactionDetail : AppDestinations("transaction_detail/{transactionId}") {
+        fun createRoute(transactionId: String) = "transaction_detail/$transactionId"
+    }
 
 
     // ... Bạn có thể thêm 10 màn hình nữa vào đây ...

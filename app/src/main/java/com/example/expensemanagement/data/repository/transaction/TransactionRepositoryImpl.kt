@@ -78,13 +78,23 @@ class TransactionRepositoryImpl @Inject constructor(
         }
     }
 
+//    override suspend fun deleteTransaction(transactionId: String): Result<Unit> {
+//        return try {
+//            // Tìm đến document có ID tương ứng và xóa nó
+//            userTransactionsCollection.document(transactionId).delete().await()
+//            Result.Success(Unit)
+//        } catch (e: Exception) {
+//            e.printStackTrace()
+//            Result.Error(e)
+//        }
+//    }
+
     override suspend fun deleteTransaction(transactionId: String): Result<Unit> {
+        val collection = userTransactionsCollection ?: return Result.Error(Exception("User not logged in"))
         return try {
-            // Tìm đến document có ID tương ứng và xóa nó
-            userTransactionsCollection.document(transactionId).delete().await()
+            collection.document(transactionId).delete().await()
             Result.Success(Unit)
         } catch (e: Exception) {
-            e.printStackTrace()
             Result.Error(e)
         }
     }
