@@ -19,6 +19,8 @@ data class Wallet(
     @ServerTimestamp // Tự động lấy ngày giờ tạo từ server
     val createdAt: Date? = null,
 
+//    val isArchived: Boolean = false, // true nếu ví đã được lưu trữ/ẩn
+
     // --- THÊM CÁC TRƯỜNG CHO VÍ TIẾT KIỆM (Màn 3) ---
     val sourceWalletId: String? = null, // ID của ví gốc (Ví nguồn)
     val targetBalance: Double? = null,   // Tiền lãi/gốc dự kiến

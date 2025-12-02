@@ -262,7 +262,9 @@ fun LoginScreen(
             Text(
                 text = "Hoặc",
                 modifier = Modifier.padding(vertical = 24.dp),
-                color = Color.Gray
+//                color = Color.Gray
+                //  Lấy màu từ Theme
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
             )
             OutlinedButton(
                 onClick = { startGoogleSignIn() }, // <-- GỌI HÀM MỚI Ở ĐÂY
@@ -270,7 +272,8 @@ fun LoginScreen(
                     .fillMaxWidth()
                     .height(50.dp),
                 shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.dp, Color.LightGray)
+//                border = BorderStroke(1.dp, Color.LightGray)
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_google_logo),

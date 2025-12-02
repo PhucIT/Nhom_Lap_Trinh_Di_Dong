@@ -48,10 +48,13 @@ fun ReportScreen(
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFE3F2FD))
+//                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFE3F2FD))
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                )
             )
         },
-        containerColor = Color(0xFFE3F2FD)
+//        containerColor = Color(0xFFE3F2FD)
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -69,7 +72,8 @@ fun ReportScreen(
                     .fillMaxSize()
                     .padding(top = 16.dp)
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-                    .background(Color.White)
+//                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(24.dp)
             ) {
@@ -106,7 +110,10 @@ fun ReportHeader(selectedFilter: TimeFilter, onFilterSelected: (TimeFilter) -> U
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text("Tổng quan chi tiêu ${monthYear.replaceFirstChar { it.titlecase(Locale.getDefault()) }}")
+        Text("Tổng quan chi tiêu ${monthYear.replaceFirstChar { it.titlecase(Locale.getDefault()) }}",
+            color = MaterialTheme.colorScheme.onBackground
+        )
+
 
 
         TimeRangeSelector(
@@ -123,7 +130,8 @@ fun TimeRangeSelector(selectedRange: TimeFilter, onRangeSelected: (TimeFilter) -
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(Color.White.copy(alpha = 0.7f))
+//            .background(Color.White.copy(alpha = 0.7f))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
             .padding(4.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -142,10 +150,12 @@ fun TimeRangeSelector(selectedRange: TimeFilter, onRangeSelected: (TimeFilter) -
                     .weight(1f)
                     .clip(RoundedCornerShape(20.dp))
                     // Nền trắng và có viền khi được chọn
-                    .background(if (isSelected) Color.White else Color.Transparent)
+//                    .background(if (isSelected) Color.White else Color.Transparent)
+                    .background(if (isSelected) MaterialTheme.colorScheme.surface else Color.Transparent)
                     .border(
                         width = if (isSelected) 1.5.dp else 0.dp,
-                        color = if (isSelected) Color(0xFF00897B) else Color.Transparent,
+//                        color = if (isSelected) Color(0xFF00897B) else Color.Transparent,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
                         shape = RoundedCornerShape(20.dp)
                     )
                     .clickable { onRangeSelected(range) }
@@ -155,7 +165,8 @@ fun TimeRangeSelector(selectedRange: TimeFilter, onRangeSelected: (TimeFilter) -
                 Text(
                     text = text,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (isSelected) Color(0xFF00897B) else Color.Gray,
+//                    color = if (isSelected) Color(0xFF00897B) else Color.Gray,
+                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                     fontSize = 14.sp
                 )
             }
@@ -180,7 +191,8 @@ fun IncomeExpenseSummary(totalIncome: Double, incomeChange: Int, totalExpense: D
 @Composable
 fun SummaryColumn(label: String, amount: Double, percentage: Int, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(label, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+//        Text(label, style = MaterialTheme.typography.labelMedium, color = Color.Gray)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Text(
             text = amount.formatCurrency(),
             style = MaterialTheme.typography.titleLarge,
@@ -191,7 +203,8 @@ fun SummaryColumn(label: String, amount: Double, percentage: Int, color: Color) 
             text = "${if (percentage >= 0) "+$percentage%" else "$percentage%"} so với tháng trước",
             style = MaterialTheme.typography.bodySmall,
             fontSize = 10.sp,
-            color = Color.Gray
+//            color = Color.Gray
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -222,14 +235,16 @@ fun SpendingTrendChart(data: Map<String, Double>) {
                                 .width(24.dp)
                                 .fillMaxHeight(heightFraction)
                                 .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                .background(Color(0xFFFF5252))
+//                                .background(Color(0xFFFF5252))
+                                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.8f))
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = label,
                             style = MaterialTheme.typography.labelSmall,
                             maxLines = 1,
-                            fontSize = 10.sp
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -239,10 +254,15 @@ fun SpendingTrendChart(data: Map<String, Double>) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(200.dp)
-                    .background(Color(0xFFF5F5F5), RoundedCornerShape(12.dp)),
+//                    .background(Color(0xFFF5F5F5), RoundedCornerShape(12.dp)),
+                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Chưa có dữ liệu chi tiêu", color = Color.Gray)
+                Text(
+                    "Chưa có dữ liệu chi tiêu",
+//                    color = Color.Gray
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }

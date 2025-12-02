@@ -57,7 +57,8 @@ fun TransactionHistoryScreen(
                     Card(
                         modifier = Modifier.padding(start = 8.dp),
                         shape = RoundedCornerShape(8.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
+//                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                         border = BorderStroke(1.dp, Color.Black)
                     ) {
                         IconButton(onClick = onNavigateBack) {
@@ -67,13 +68,21 @@ fun TransactionHistoryScreen(
                 },
                 actions = {
                     IconButton(onClick = { /* TODO: Lọc ngày */ }) {
-                        Icon(Icons.Default.CalendarMonth, contentDescription = "Lọc ngày", tint = Color(0xFFFFC107))
+                        Icon(
+                            Icons.Default.CalendarMonth,
+                            contentDescription = "Lọc ngày",
+//                            tint = Color(0xFFFFC107)
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFE0F7FA))
+//                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFFE0F7FA))
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
+                )
             )
         },
-        containerColor = Color(0xFFE0F7FA) // Nền xanh nhạt toàn màn hình
+//        containerColor = Color(0xFFE0F7FA) // Nền xanh nhạt toàn màn hình
     ) { paddingValues ->
 
         Column(
@@ -111,7 +120,8 @@ fun TransactionHistoryScreen(
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+//                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text("Hôm nay, ${SimpleDateFormat("dd 'tháng' MM, yyyy", Locale("vi", "VN")).format(Date())}", fontWeight = FontWeight.Bold, fontSize = 16.sp)

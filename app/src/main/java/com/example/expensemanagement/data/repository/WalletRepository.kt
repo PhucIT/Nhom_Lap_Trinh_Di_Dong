@@ -45,4 +45,6 @@ interface WalletRepository {
 
     // Hàm để cập nhật số dư ví
     suspend fun updateWalletBalance(walletId: String, amountChange: Double): Result<Unit>
+// xử lý lưu trữ/ẩn ví
+//    suspend fun archiveWallet(walletId: String): Result<Unit>
 }

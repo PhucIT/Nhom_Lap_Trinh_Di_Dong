@@ -54,11 +54,12 @@ fun SettingsScreen(
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color(0xFFE0F7FA) // Màu xanh nhạt giống ảnh
+//                    containerColor = Color(0xFFE0F7FA) // Màu xanh nhạt giống ảnh
+                        containerColor = MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp)
                 )
             )
         },
-        containerColor = Color.White
+//        containerColor = Color.White
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -72,7 +73,8 @@ fun SettingsScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFFE0F7FA))
+//                    .background(Color(0xFFE0F7FA))
+                    .background(MaterialTheme.colorScheme.surfaceColorAtElevation(3.dp))
                     .padding(bottom = 24.dp, start = 16.dp, end = 16.dp, top = 8.dp)
             ) {
                 Card(
@@ -80,7 +82,8 @@ fun SettingsScreen(
                         .fillMaxWidth(),
 //                        .clickable { onNavigateToProfile() }, // Nhấn vào để sửa hồ sơ
                     shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.White),
+//                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                     elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
                 ) {
                     Row(
@@ -95,7 +98,8 @@ fun SettingsScreen(
                                 .size(60.dp)
                                 .clickable { onNavigateToProfile() },
                             shape = CircleShape,
-                            color = Color.LightGray
+//                            color = Color.LightGray
+                            color = MaterialTheme.colorScheme.secondaryContainer
                         ) {
                             // Hiển thị icon người nếu chưa có ảnh
                             Box(contentAlignment = Alignment.Center) {
@@ -103,7 +107,8 @@ fun SettingsScreen(
                                     imageVector = Icons.Default.Person,
                                     contentDescription = null,
                                     modifier = Modifier.size(40.dp),
-                                    tint = Color.White
+//                                    tint = Color.White
+                                    tint = MaterialTheme.colorScheme.onSecondaryContainer
                                 )
                             }
                             // TODO: Dùng Coil để load ảnh avatar thật từ URL (currentUser?.photoUrl)
@@ -124,7 +129,8 @@ fun SettingsScreen(
                             Text(
                                 text = currentUser?.email ?: "Chưa có email",
                                 style = MaterialTheme.typography.bodySmall,
-                                color = Color.Gray
+//                                color = Color.Gray
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
 
@@ -169,7 +175,8 @@ fun SettingsScreen(
                 SettingsItem(
                     icon = Icons.Default.Security,
                     title = "Bảo mật",
-                    onClick = { onNavigateToSecurity() }
+//                    onClick = { onNavigateToSecurity() }
+                    onClick = onNavigateToSecurity
                 )
                 HorizontalDivider()
 
@@ -218,8 +225,10 @@ fun SettingsScreen(
                         viewModel.logout() // Gọi hàm đăng xuất
                         onLogout() // Gọi callback để chuyển về màn Login
                     },
-                    textColor = Color.Red, // Chữ đỏ cho nút đăng xuất (nếu muốn)
-                    iconColor = Color.Red
+//                    textColor = Color.Red, // Chữ đỏ cho nút đăng xuất (nếu muốn)
+//                    iconColor = Color.Red
+                    textColor = MaterialTheme.colorScheme.error,
+                    iconColor = MaterialTheme.colorScheme.error
                 )
             }
 
@@ -237,8 +246,11 @@ fun SettingsItem(
     icon: ImageVector,
     title: String,
     onClick: () -> Unit,
-    iconColor: Color = Color.Black,
-    textColor: Color = Color.Black
+//    iconColor: Color = Color.Black,
+//    textColor: Color = Color.Black
+    // SỬA LẠI: Giá trị mặc định bây giờ là Color.Unspecified để nó tự lấy màu theme
+    iconColor: Color = Color.Unspecified,
+    textColor: Color = Color.Unspecified
 ) {
     Row(
         modifier = Modifier
@@ -250,8 +262,11 @@ fun SettingsItem(
         // Icon bên trái
         Icon(
             imageVector = icon,
-            contentDescription = null,
-            tint = iconColor,
+            contentDescription = title,
+//            tint = iconColor,
+//            modifier = Modifier.size(24.dp)
+            // SỬA LẠI: Nếu không truyền màu, nó sẽ tự lấy màu onSurface (LocalContentColor.current)
+            tint = if (iconColor != Color.Unspecified) iconColor else LocalContentColor.current,
             modifier = Modifier.size(24.dp)
         )
 
@@ -262,16 +277,23 @@ fun SettingsItem(
             text = title,
             style = MaterialTheme.typography.bodyLarge,
             fontWeight = FontWeight.Medium, // Đậm vừa phải
-            color = textColor,
+//            color = textColor,
+            color = if (textColor != Color.Unspecified) textColor else Color.Unspecified,
             modifier = Modifier.weight(1f)
         )
 
         // Mũi tên nhỏ bên phải
-         Icon(Icons.Default.ChevronRight, contentDescription = null, tint = Color.Gray)
+         Icon(
+             Icons.Default.ChevronRight,
+             contentDescription = null,
+//             tint = Color.Gray
+             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+         )
     }
 }
 
 @Composable
 fun HorizontalDivider() {
-    Divider(color = Color.LightGray.copy(alpha = 0.5f), thickness = 1.dp)
+//    Divider(color = Color.LightGray.copy(alpha = 0.5f), thickness = 1.dp)
+    Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), thickness = 1.dp)
 }
