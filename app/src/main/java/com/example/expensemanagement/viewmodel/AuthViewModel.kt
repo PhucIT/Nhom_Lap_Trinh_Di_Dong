@@ -15,6 +15,7 @@ import android.app.Activity
 import android.net.Uri
 import android.util.Log
 import com.example.expensemanagement.data.repository.Category.CategoryRepository
+import com.example.expensemanagement.data.repository.Storage.StorageRepository
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
@@ -22,7 +23,9 @@ import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeUnit
 
 
@@ -45,7 +48,8 @@ sealed class AuthState {
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val auth: FirebaseAuth, // Hilt "tiêm" FirebaseAuth vào đây
-    private val categoryRepository: CategoryRepository
+    private val categoryRepository: CategoryRepository,
+    private val storageRepository: StorageRepository
 ) : ViewModel() {
 
     // --- State chung cho cả Đăng nhập & Đăng ký ---
@@ -89,7 +93,7 @@ class AuthViewModel @Inject constructor(
     val profileEmail: StateFlow<String> = _profileEmail
 
     private val _profileImageUri = MutableStateFlow<Uri?>(null)
-    val profileImageUri: StateFlow<Uri?> = _profileImageUri
+    val profileImageUri: StateFlow<Uri?> = _profileImageUri.asStateFlow()
 
     // --- State cho màn hình Đổi mật khẩu ---
     private val _currentPassword = MutableStateFlow("")
@@ -191,7 +195,8 @@ class AuthViewModel @Inject constructor(
         if (user != null) {
             _profileName.value = user.displayName ?: ""
             _profileEmail.value = user.email ?: ""
-            _profileImageUri.value = user.photoUrl
+//            _profileImageUri.value = user.photoUrl
+            _profileImageUri.value = null // Reset ảnh preview
         }
     }
 
@@ -231,46 +236,108 @@ class AuthViewModel @Inject constructor(
 //                }
 //            }
 //    }
-    fun updateProfile(
-        newName: String? = null,
-        newEmail: String? = null,
-        onSuccess: () -> Unit
-    ) {
+//    fun updateProfile(
+//        newName: String? = null,
+//        newEmail: String? = null,
+//        onSuccess: () -> Unit
+//    ) {
+//        val user = auth.currentUser ?: run {
+//            _authState.value = AuthState.Error("Không tìm thấy người dùng")
+//            return
+//        }
+//
+//        _authState.value = AuthState.Loading
+//
+//        // Tạo profile update cho tên
+//        val profileBuilder = UserProfileChangeRequest.Builder()
+//        newName?.let { profileBuilder.setDisplayName(it) }
+//
+//        val profileUpdateTask = user.updateProfile(profileBuilder.build())
+//
+//        // Nếu có thay đổi email → gọi updateEmail riêng
+//        val emailUpdateTask = if (!newEmail.isNullOrBlank() && newEmail != user.email) {
+//            user.updateEmail(newEmail)
+//        } else {
+//            com.google.android.gms.tasks.Tasks.forResult(null) // Task rỗng nếu không đổi email
+//        }
+//
+//        // Chạy cả 2 task (nếu có)
+//        com.google.android.gms.tasks.Tasks.whenAllComplete(profileUpdateTask, emailUpdateTask)
+//            .addOnSuccessListener {
+//                _authState.value = AuthState.Success("Cập nhật hồ sơ thành công!")
+//                loadCurrentUserProfile() // refresh lại dữ liệu
+//                onSuccess()
+//            }
+//            .addOnFailureListener { exception ->
+//                val msg = when (exception) {
+//                    is FirebaseAuthInvalidCredentialsException -> "Email không hợp lệ"
+//                    is FirebaseAuthUserCollisionException -> "Email đã được sử dụng bởi tài khoản khác"
+//                    else -> exception.message ?: "Cập nhật thất bại"
+//                }
+//                _authState.value = AuthState.Error(msg)
+//            }
+//    }
+
+    fun updateProfile(onSuccess: () -> Unit) {
         val user = auth.currentUser ?: run {
             _authState.value = AuthState.Error("Không tìm thấy người dùng")
             return
         }
 
+        val newName = _profileName.value.trim()
+        val newEmail = _profileEmail.value.trim()
+        val newImageUri = _profileImageUri.value // Uri của ảnh mới chọn từ thư viện
+
         _authState.value = AuthState.Loading
 
-        // Tạo profile update cho tên
-        val profileBuilder = UserProfileChangeRequest.Builder()
-        newName?.let { profileBuilder.setDisplayName(it) }
+        viewModelScope.launch {
+            try {
+                var finalPhotoUrl: Uri? = null
 
-        val profileUpdateTask = user.updateProfile(profileBuilder.build())
+                // 1. Nếu người dùng có chọn ảnh mới, tải nó lên Firebase Storage trước
+                if (newImageUri != null) {
+                    when (val uploadResult = storageRepository.uploadProfileImage(user.uid, newImageUri)) {
+                        is com.example.expensemanagement.data.Result.Success -> {
+                            finalPhotoUrl = uploadResult.data
+                        }
+                        is com.example.expensemanagement.data.Result.Error -> {
+                            _authState.value = AuthState.Error("Lỗi tải ảnh lên: ${uploadResult.exception.message}")
+                            return@launch
+                        }
+                    }
+                }
 
-        // Nếu có thay đổi email → gọi updateEmail riêng
-        val emailUpdateTask = if (!newEmail.isNullOrBlank() && newEmail != user.email) {
-            user.updateEmail(newEmail)
-        } else {
-            com.google.android.gms.tasks.Tasks.forResult(null) // Task rỗng nếu không đổi email
-        }
+                // 2. Cập nhật profile của người dùng trên Firebase Auth
+                val profileUpdates = UserProfileChangeRequest.Builder()
+                    .setDisplayName(newName)
+                    .apply {
+                        if (finalPhotoUrl != null) {
+                            photoUri = finalPhotoUrl
+                        }
+                    }
+                    .build()
 
-        // Chạy cả 2 task (nếu có)
-        com.google.android.gms.tasks.Tasks.whenAllComplete(profileUpdateTask, emailUpdateTask)
-            .addOnSuccessListener {
+                user.updateProfile(profileUpdates).await()
+
+                // 3. Cập nhật email (nếu có thay đổi)
+                if (newEmail.isNotBlank() && newEmail != user.email) {
+                    user.updateEmail(newEmail).await()
+                }
+
+                // 4. Báo thành công
                 _authState.value = AuthState.Success("Cập nhật hồ sơ thành công!")
-                loadCurrentUserProfile() // refresh lại dữ liệu
+                loadCurrentUserProfile() // Tải lại thông tin mới nhất
                 onSuccess()
-            }
-            .addOnFailureListener { exception ->
-                val msg = when (exception) {
-                    is FirebaseAuthInvalidCredentialsException -> "Email không hợp lệ"
-                    is FirebaseAuthUserCollisionException -> "Email đã được sử dụng bởi tài khoản khác"
-                    else -> exception.message ?: "Cập nhật thất bại"
+
+            } catch (e: Exception) {
+                val msg = when (e) {
+                    is FirebaseAuthInvalidCredentialsException -> "Email không hợp lệ."
+                    is FirebaseAuthUserCollisionException -> "Email đã được sử dụng bởi tài khoản khác."
+                    else -> e.message ?: "Cập nhật thất bại"
                 }
                 _authState.value = AuthState.Error(msg)
             }
+        }
     }
 
     // --- Hàm cập nhật state từ UI ---

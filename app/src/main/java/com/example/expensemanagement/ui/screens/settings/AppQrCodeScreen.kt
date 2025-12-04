@@ -31,8 +31,6 @@ fun AppQrCodeScreen(
     onNavigateBack: () -> Unit
 ) {
     // ĐÂY LÀ LIÊN KẾT BẠN MUỐN CHIA SẺ
-    // Hiện tại chưa có link thật, bạn có thể thay bằng link Google Drive chứa file APK của bạn sau này
-    // Hoặc link CH Play giả định: "https://play.google.com/store/apps/details?id=com.example.expensemanagement"
     val appDownloadLink = "https://drive.google.com/file/d/1lavgsp8bGTFsKmbpz30nelX_T5wsnL5z/view?usp=drive_link"
 
     // Trạng thái chứa ảnh QR

@@ -1,5 +1,6 @@
 package com.example.expensemanagement.data.repository.Auth
 
+import android.net.Uri
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
@@ -74,10 +75,15 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun updateUserProfile(newName: String, newEmail: String?): Result<Unit> {
+    override suspend fun updateUserProfile(newName: String, newEmail: String?, photoUri: Uri?): Result<Unit> {
         val user = auth.currentUser ?: return Result.Error(Exception("User not logged in"))
         return try {
-            val profileUpdates = userProfileChangeRequest { displayName = newName }
+            val profileUpdates = userProfileChangeRequest {
+                displayName = newName
+                if (photoUri != null) {
+                    this.photoUri = photoUri
+                }
+            }
             user.updateProfile(profileUpdates).await()
             if (newEmail != null&& newEmail != user.email) {
                 user.updateEmail(newEmail).await()

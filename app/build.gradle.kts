@@ -119,7 +119,13 @@ dependencies {
     implementation("androidx.biometric:biometric-ktx:1.2.0-alpha05")
 
     implementation("androidx.core:core-splashscreen:1.0.1")
+
+    implementation("com.google.firebase:firebase-storage-ktx")
+
+    // --- THÊM THƯ VIỆN NÀY ĐỂ SỬ DỤNG AsyncImage ---
+    implementation("io.coil-kt:coil-compose:2.6.0")
 }
+
 
 
 // THAY THẾ KHỐI KAPT CŨ BẰNG KHỐI NÀY

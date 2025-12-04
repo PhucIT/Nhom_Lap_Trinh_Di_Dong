@@ -2,8 +2,12 @@
 package com.example.expensemanagement.ui.screens.settings
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -18,12 +22,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+//import androidx.privacysandbox.tools.core.generator.build
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
+import com.example.expensemanagement.R
 import com.example.expensemanagement.ui.theme.PrimaryGreen
 import com.example.expensemanagement.viewmodel.AuthState
 import com.example.expensemanagement.viewmodel.AuthViewModel
@@ -38,7 +48,18 @@ fun ProfileScreen(
     val email by viewModel.profileEmail.collectAsStateWithLifecycle()
     val authState by viewModel.authState.collectAsStateWithLifecycle()
 
+    val currentUser by viewModel.currentUserInfo.collectAsStateWithLifecycle()
+    val newImageUri by viewModel.profileImageUri.collectAsStateWithLifecycle() // Uri của ảnh mới chọn
+
     val context = LocalContext.current
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onProfileImageChange(uri)
+        }
+    }
 
     // Load thông tin user khi vào màn hình
     LaunchedEffect(Unit) {
@@ -57,7 +78,7 @@ fun ProfileScreen(
                 Toast.makeText(context, state.message, Toast.LENGTH_LONG).show()
                 viewModel.resetAuthStateToIdle()
             }
-            else -> Unit
+            else -> {}
         }
     }
 
@@ -88,7 +109,7 @@ fun ProfileScreen(
                 )
             )
         },
-        containerColor = Color.White
+        containerColor = MaterialTheme.colorScheme.surface
     ) { paddingValues ->
         Column(
             modifier = Modifier
@@ -103,19 +124,53 @@ fun ProfileScreen(
 
             // Avatar tròn + icon camera
             Box(
-                modifier = Modifier
-                    .size(120.dp)
-                    .clip(CircleShape)
-                    .background(Color.LightGray.copy(alpha = 0.6f)),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.BottomEnd // Đặt icon camera ở góc dưới bên phải
             ) {
-                Icon(
-                    imageVector = Icons.Default.CameraAlt,
-                    contentDescription = "Đổi ảnh đại diện",
-                    tint = Color.DarkGray,
-                    modifier = Modifier.size(48.dp)
+                // Dùng AsyncImage của Coil để hiển thị ảnh
+                AsyncImage(
+                    model = ImageRequest.Builder(LocalContext.current)
+                        // Ưu tiên hiển thị ảnh mới chọn, nếu không có thì hiển thị ảnh cũ, cuối cùng là ảnh mặc định
+                        .data(newImageUri ?: currentUser?.photoUrl ?: R.drawable.ic_piggy_bank)
+                        .crossfade(true)
+                        .build(),
+                    placeholder = painterResource(R.drawable.ic_piggy_bank),
+                    error = painterResource(R.drawable.ic_piggy_bank),
+                    contentDescription = "Ảnh đại diện",
+                    contentScale = ContentScale.Crop, // Đảm bảo ảnh lấp đầy hình tròn
+                    modifier = Modifier
+                        .size(120.dp)
+                        .clip(CircleShape)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        .clickable { // Nhấn vào ảnh cũng có thể chọn ảnh mới
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        }
                 )
+
+                // Nút Camera nhỏ chồng lên
+                IconButton(
+                    onClick = {
+                        photoPickerLauncher.launch(
+                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primary)
+                ) {
+                    Icon(
+                        Icons.Default.CameraAlt,
+                        contentDescription = "Thay đổi ảnh",
+                        tint = MaterialTheme.colorScheme.onPrimary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
+
 
             Spacer(modifier = Modifier.height(48.dp))
 
@@ -123,7 +178,7 @@ fun ProfileScreen(
             Text(
                 text = "Email",
                 fontWeight = FontWeight.Bold,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -134,10 +189,10 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFE0F7FA),
-                    unfocusedContainerColor = Color(0xFFE0F7FA),
-                    focusedBorderColor = PrimaryGreen,
-                    unfocusedBorderColor = Color.Transparent
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 placeholder = { Text("nhập email mới email...") }
             )
@@ -148,7 +203,7 @@ fun ProfileScreen(
             Text(
                 text = "Tên hiển thị",
                 fontWeight = FontWeight.Bold,
-                color = Color.Gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.Start)
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -159,10 +214,10 @@ fun ProfileScreen(
                 shape = RoundedCornerShape(12.dp),
                 singleLine = true,
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0xFFE0F7FA),
-                    unfocusedContainerColor = Color(0xFFE0F7FA),
-                    focusedBorderColor = PrimaryGreen,
-                    unfocusedBorderColor = Color.Transparent
+                    focusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.surfaceVariant
                 ),
                 placeholder = { Text("Nhập tên của bạn...") }
             )
@@ -171,22 +226,27 @@ fun ProfileScreen(
 
             // Nút Cập nhật
             Button(
-                onClick = {
-                    viewModel.updateProfile(
-                        newName = name.trim(),
-                        newEmail = email.trim(),
-                        onSuccess = onNavigateBack
-                    )
-                },
+//                onClick = {
+//                    viewModel.updateProfile(
+//                        newName = name.trim(),
+//                        newEmail = email.trim(),
+//                        onSuccess = onNavigateBack
+//                    )
+//                },
+                onClick = { viewModel.updateProfile(onSuccess = onNavigateBack) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+//                colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
                 shape = RoundedCornerShape(12.dp),
                 enabled = authState !is AuthState.Loading && (name.isNotBlank() || email.isNotBlank())
             ) {
                 if (authState is AuthState.Loading) {
-                    CircularProgressIndicator(color = Color.White, strokeWidth = 3.dp, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
                     Text("Cập nhật hồ sơ", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
                 }

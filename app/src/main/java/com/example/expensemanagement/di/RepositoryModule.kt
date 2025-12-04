@@ -8,6 +8,8 @@ import com.example.expensemanagement.data.repository.Category.CategoryRepository
 import com.example.expensemanagement.data.repository.Category.CategoryRepositoryImpl
 import com.example.expensemanagement.data.repository.Security.SecurityRepository
 import com.example.expensemanagement.data.repository.Security.SecurityRepositoryImpl
+import com.example.expensemanagement.data.repository.Storage.StorageRepository
+import com.example.expensemanagement.data.repository.Storage.StorageRepositoryImpl
 import com.example.expensemanagement.data.repository.Theme.ThemeRepository
 import com.example.expensemanagement.data.repository.Theme.ThemeRepositoryImpl
 import com.example.expensemanagement.data.repository.WalletRepository
@@ -66,5 +68,10 @@ abstract class RepositoryModule {
     abstract fun bindAuthRepository(
         authRepositoryImpl: AuthRepositoryImpl
     ): AuthRepository
+
+    // cập nhật ảnh profile
+    @Binds
+    @Singleton
+    abstract fun bindStorageRepository(impl: StorageRepositoryImpl): StorageRepository
     // (Chúng ta sẽ thêm TransactionRepository... vào đây sau)
 }
