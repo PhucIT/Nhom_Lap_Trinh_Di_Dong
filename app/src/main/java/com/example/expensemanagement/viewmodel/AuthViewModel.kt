@@ -54,35 +54,35 @@ class AuthViewModel @Inject constructor(
 
     // --- State chung cho cả Đăng nhập & Đăng ký ---
     private val _email = MutableStateFlow("")
-    val email: StateFlow<String> = _email
+    val email: StateFlow<String> = _email.asStateFlow()
 
     private val _password = MutableStateFlow("")
-    val password: StateFlow<String> = _password
+    val password: StateFlow<String> = _password.asStateFlow()
 
     // --- State chỉ dùng cho Đăng ký ---
     private val _name = MutableStateFlow("") // Tên người dùng
-    val name: StateFlow<String> = _name
+    val name: StateFlow<String> = _name.asStateFlow()
 
     private val _confirmPassword = MutableStateFlow("") // Nhập lại mật khẩu
-    val confirmPassword: StateFlow<String> = _confirmPassword
+    val confirmPassword: StateFlow<String> = _confirmPassword.asStateFlow()
 
     // --- State chỉ dùng cho Quên Mật khẩu ---
     private val _resetInput = MutableStateFlow("") // (Email hoặc SĐT)
-    val resetInput: StateFlow<String> = _resetInput
+    val resetInput: StateFlow<String> = _resetInput.asStateFlow()
 
     // --- State cho OTP ---
     private val _otpCode = MutableStateFlow("") // (Dùng để nhập 6 số)
-    val otpCode: StateFlow<String> = _otpCode
+    val otpCode: StateFlow<String> = _otpCode.asStateFlow()
     private val _verificationId = MutableStateFlow<String?>(null) // (Lưu ID xác thực)
-    val verificationId: StateFlow<String?> = _verificationId
+    val verificationId: StateFlow<String?> = _verificationId.asStateFlow()
 
     // --- State quản lý trạng thái (Loading, Success, Error...) ---
     private val _authState = MutableStateFlow<AuthState>(AuthState.Loading) // Bắt đầu bằng Loading để check
-    val authState: StateFlow<AuthState> = _authState
+    val authState: StateFlow<AuthState> = _authState.asStateFlow()
 
     // Biến lưu thông tin User hiện tại (để hiển thị lên UI)
     private val _currentUserInfo = MutableStateFlow<FirebaseUser?>(null)
-    val currentUserInfo: StateFlow<FirebaseUser?> = _currentUserInfo
+    val currentUserInfo: StateFlow<FirebaseUser?> = _currentUserInfo.asStateFlow()
 
 
     // --- State cho màn hình Profile ---
@@ -174,7 +174,19 @@ class AuthViewModel @Inject constructor(
                                 categoryRepository.initDefaultCategories()
                             }
                         } else {
-                            _authState.value = AuthState.Error(task.exception?.message ?: "Đăng nhập thất bại.")
+                            val errorMsg = when (task.exception?.message) {
+                                "There is no user record corresponding to this identifier." ->
+                                    "Tài khoản không tồn tại."
+                                "The password is invalid or the user does not have a password." ->
+                                    "Mật khẩu không đúng."
+                                "The email address is badly formatted." ->
+                                    "Email không hợp lệ."
+                                "The email address is already in use by another account." ->
+                                    "Email đã được sử dụng."
+                                else -> task.exception?.message ?: "Đăng nhập thất bại."
+                            }
+//                            _authState.value = AuthState.Error(task.exception?.message ?: "Đăng nhập thất bại.")
+                            _authState.value = AuthState.Error(errorMsg)
                         }
                     }
             } catch (e: Exception) {

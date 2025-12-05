@@ -58,6 +58,20 @@ fun AppNavigation(
         startDestination = startDestination
     ) {
 
+        // --- THÊM COMPOSABLE ĐẶC BIỆT CHO MÀN HÌNH KHÓA KHI MỞ APP ---
+        composable("pin_lock") {
+            PinInputScreen(
+                mode = PinScreenMode.VERIFY, // Chế độ xác thực
+                onNavigateBack = { /* Không cho phép quay lại từ màn hình này */ },
+                onPinSuccess = {
+                    // Sau khi nhập đúng PIN, điều hướng đến Dashboard và xóa màn hình PIN khỏi back stack
+                    navController.navigate(AppDestinations.Dashboard.route) {
+                        popUpTo("pin_lock") { inclusive = true }
+                    }
+                }
+            )
+        }
+
         // 1. Màn hình Onboarding
         composable(AppDestinations.Onboarding.route) {
             OnboardingScreen(
@@ -186,7 +200,12 @@ fun AppNavigation(
 
         // 7. Màn hình Thêm Giao Dịch
         composable(
-            AppDestinations.AddTransaction.route
+            AppDestinations.AddTransaction.route,
+            // Khai báo argument để ViewModel có thể nhận
+            arguments = listOf(navArgument("transactionId") {
+                type = NavType.StringType
+                nullable = true // Quan trọng: cho phép null khi Thêm mới
+            })
         ) {
             AddTransactionScreen(
                 onNavigateBack = {

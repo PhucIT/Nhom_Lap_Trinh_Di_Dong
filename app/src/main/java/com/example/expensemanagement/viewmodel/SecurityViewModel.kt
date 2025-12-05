@@ -28,16 +28,16 @@ class SecurityViewModel @Inject constructor(
 
     // StateFlow kết hợp từ các nguồn dữ liệu
     val uiState: StateFlow<SecurityUiState> = combine(
-        securityRepository.isAppLockEnabled,
-        securityRepository.isBiometricEnabled,
-        securityRepository.hasPinSetup()
+        securityRepository.isAppLockEnabled, // // Flow: khóa bật/tắt
+        securityRepository.isBiometricEnabled, // Flow: vân tay bật/tắt
+        securityRepository.hasPinSetup() // Flow: có PIN chưa
     ) { appLock, biometric, hasPin ->
         SecurityUiState(
             isAppLockEnabled = appLock,
             isBiometricEnabled = biometric,
             hasPinSetup = hasPin,
             // Kiểm tra biometric mỗi khi state thay đổi (hoặc lấy giá trị tĩnh)
-            canUseBiometrics = checkBiometricSupport()
+            canUseBiometrics = checkBiometricSupport() // ← Kiểm tra máy có vân tay không
         )
     }.stateIn(
         scope = viewModelScope,
@@ -50,7 +50,7 @@ class SecurityViewModel @Inject constructor(
         viewModelScope.launch {
             securityRepository.setAppLockEnabled(isEnabled)
             if (!isEnabled) {
-                securityRepository.setBiometricEnabled(false)
+                securityRepository.setBiometricEnabled(false) // ← TẮT LUÔN VÂN TAY
             }
         }
     }
@@ -62,6 +62,7 @@ class SecurityViewModel @Inject constructor(
         }
     }
 
+    // kiểm tra máy có vân tay kh
     private fun checkBiometricSupport(): Boolean {
         return try {
             val biometricManager = BiometricManager.from(context)

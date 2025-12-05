@@ -16,6 +16,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import java.io.IOException
 import androidx.datastore.preferences.core.emptyPreferences
+import kotlinx.coroutines.flow.first
 
 // Khởi tạo DataStore dùng chung
 //private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -68,4 +69,11 @@ class SecurityRepositoryImpl @Inject constructor(
 
     override fun hasPinSetup(): Flow<Boolean> = context.dataStore.data
         .map { preferences -> !preferences[Keys.USER_PIN].isNullOrBlank() }
+
+    override suspend fun verifyPin(pin: String): Boolean {
+        // Đọc mã PIN đã lưu từ DataStore
+        val savedPin = savedPin.first()
+        // So sánh với mã PIN người dùng nhập
+        return pin == savedPin
+    }
 }

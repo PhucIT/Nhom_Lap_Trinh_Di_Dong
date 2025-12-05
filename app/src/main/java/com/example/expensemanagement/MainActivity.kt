@@ -26,6 +26,10 @@ import com.example.expensemanagement.ui.theme.ExpenseManagementTheme
 import com.example.expensemanagement.viewmodel.AuthState
 import com.example.expensemanagement.viewmodel.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import androidx.compose.runtime.produceState
+import com.example.expensemanagement.viewmodel.MainViewModel
+import com.example.expensemanagement.viewmodel.SecurityViewModel
+import com.example.expensemanagement.viewmodel.StartDestinationState
 
 //@AndroidEntryPoint
 //class MainActivity : ComponentActivity() {
@@ -99,38 +103,66 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
+//            ExpenseManagementTheme {
+//                // Surface chỉ dùng để đặt màu nền mặc định
+//                Surface(
+//                    modifier = Modifier.fillMaxSize(),
+//                    color = MaterialTheme.colorScheme.background
+//                ) {
+//                    // ---- SỬA LẠI HOÀN TOÀN LOGIC Ở ĐÂY ----
+//                    val viewModel: AuthViewModel = hiltViewModel()
+//                    val authState by viewModel.authState.collectAsStateWithLifecycle()
+//
+//                    // Dùng `remember` để chỉ xác định startDestination một lần
+//                    var startDestination by remember { mutableStateOf<String?>(null) }
+//
+//                    // Dùng LaunchedEffect để xác định màn hình bắt đầu một cách an toàn
+//                    LaunchedEffect(authState) {
+//                        startDestination = when (authState) {
+//                            is AuthState.Authenticated -> AppDestinations.Dashboard.route
+//                            is AuthState.Unauthenticated -> AppDestinations.Onboarding.route
+//                            else -> null // Các trạng thái khác (Loading, Idle) thì chưa quyết định
+//                        }
+//                    }
+//
+//                    // Chỉ hiển thị AppNavigation KHI VÀ CHỈ KHI đã xác định được startDestination
+//                    if (startDestination != null) {
+//                        AppNavigation(startDestination = startDestination!!)
+//                    } else {
+//                        // Trong khi chờ đợi, hiển thị một vòng xoay loading
+//                        Box(
+//                            modifier = Modifier.fillMaxSize(),
+//                            contentAlignment = Alignment.Center
+//                        ) {
+//                            CircularProgressIndicator()
+//                        }
+//                    }
+//                }
+//            }
+
             ExpenseManagementTheme {
-                // Surface chỉ dùng để đặt màu nền mặc định
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
                     // ---- SỬA LẠI HOÀN TOÀN LOGIC Ở ĐÂY ----
-                    val viewModel: AuthViewModel = hiltViewModel()
-                    val authState by viewModel.authState.collectAsStateWithLifecycle()
+                    val mainViewModel: MainViewModel = hiltViewModel()
+                    val startState by mainViewModel.startDestinationState.collectAsStateWithLifecycle()
 
-                    // Dùng `remember` để chỉ xác định startDestination một lần
-                    var startDestination by remember { mutableStateOf<String?>(null) }
-
-                    // Dùng LaunchedEffect để xác định màn hình bắt đầu một cách an toàn
-                    LaunchedEffect(authState) {
-                        startDestination = when (authState) {
-                            is AuthState.Authenticated -> AppDestinations.Dashboard.route
-                            is AuthState.Unauthenticated -> AppDestinations.Onboarding.route
-                            else -> null // Các trạng thái khác (Loading, Idle) thì chưa quyết định
+                    when (val state = startState) {
+                        is StartDestinationState.Loading -> {
+                            // Trong khi chờ xác định, hiển thị loading
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
                         }
-                    }
 
-                    // Chỉ hiển thị AppNavigation KHI VÀ CHỈ KHI đã xác định được startDestination
-                    if (startDestination != null) {
-                        AppNavigation(startDestination = startDestination!!)
-                    } else {
-                        // Trong khi chờ đợi, hiển thị một vòng xoay loading
-                        Box(
-                            modifier = Modifier.fillMaxSize(),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
+                        is StartDestinationState.Destination -> {
+                            // Khi đã xác định được màn hình bắt đầu, gọi AppNavigation
+                            AppNavigation(startDestination = state.route)
                         }
                     }
                 }

@@ -1,4 +1,4 @@
-package com.example.expensemanagement.ui.screens.auth
+    package com.example.expensemanagement.ui.screens.auth
 
 
 import android.app.Activity

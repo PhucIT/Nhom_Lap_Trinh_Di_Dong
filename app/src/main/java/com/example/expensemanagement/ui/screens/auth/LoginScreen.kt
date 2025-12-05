@@ -237,7 +237,7 @@ fun LoginScreen(
             Button(
 //                onClick = { viewModel.login(onSuccess = onLoginSuccess) },
                 onClick = {
-                    // --- ĐÃ SỬA LỖI: CHẶN VÀ BÁO CÁO NẾU FORM RỖNG ---
+                    // --- CHẶN VÀ BÁO CÁO NẾU FORM RỖNG ---
                     if (isFormValid) {
                         viewModel.login(onSuccess = onLoginSuccess)
                     } else {
